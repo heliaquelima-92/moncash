@@ -1,223 +1,102 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { LayoutDashboard, Receipt, PiggyBank, Settings, Plus, ArrowUpCircle, ArrowDownCircle, LogOut, X } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import React from 'react';
+import { useDados } from '@/hooks/useDados';
+import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function Home() {
-  const router = useRouter();
-  const [carregando, setCarregando] = useState(true);
-  const [usuario, setUsuario] = useState<any>(null);
-  
-  // Controle do Modal
-  const [modalAberto, setModalAberto] = useState(false);
-  const [tipoTransacao, setTipoTransacao] = useState<'saida' | 'entrada'>('saida');
-
-  const logoUrl = "https://i.imgur.com/igiIEnb.png"; 
-
-  useEffect(() => {
-    const verificarSessao = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push('/login');
-      } else {
-        setUsuario(session.user);
-        setCarregando(false);
-      }
-    };
-
-    verificarSessao();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) router.push('/login');
-    });
-
-    return () => subscription.unsubscribe();
-  }, [router]);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/login');
-  };
-
-  if (carregando) {
-    return (
-      <div className="min-h-screen bg-moncash-darker flex items-center justify-center">
-        <div className="text-center animate-fade-in">
-          <img src={logoUrl} alt="Moncash" className="h-16 mx-auto mb-6 animate-pulse-lime drop-shadow-[0_0_15px_rgba(213,255,64,0.2)]" />
-          <div className="w-10 h-10 border-4 border-moncash-lime/20 border-t-moncash-lime rounded-full animate-spin mx-auto" />
-        </div>
-      </div>
-    );
-  }
-
-  const nomeUtilizador = usuario?.user_metadata?.nome || 'Utilizador';
+  const { contasTemporarias, contasFixas, parceladas, totalGastosAvulsos, loading } = useDados();
+  const logoUrl = "https://i.imgur.com/igiIEnb.png";
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-moncash-darker text-moncash-text font-sans pb-20 md:pb-0 selection:bg-moncash-lime selection:text-moncash-darker relative">
+    <div className="flex flex-col md:flex-row min-h-screen bg-moncash-darker text-moncash-text">
       
-      {/* Sidebar - Computador */}
-      <aside className="hidden md:flex w-64 border-r border-moncash-border p-6 flex-col gap-8 bg-moncash-dark z-10 relative">
-        <div className="flex justify-center items-center py-4 animate-fade-in">
-          <img src={logoUrl} alt="Logo Moncash" className="w-40 h-auto object-contain drop-shadow-[0_0_15px_rgba(213,255,64,0.2)]" />
-        </div>
-
-        <nav className="flex flex-col gap-2 mt-2 flex-1">
-          <a href="#" className="flex items-center gap-4 text-moncash-darker bg-moncash-lime p-4 rounded-xl font-bold transition-all animate-glow">
-            <LayoutDashboard size={22} /> Dashboard
-          </a>
-          <a href="#" className="flex items-center gap-4 text-moncash-text-secondary hover:text-moncash-lime hover:bg-moncash-card p-4 rounded-xl transition-all font-medium">
-            <Receipt size={22} /> Transações
-          </a>
-          <a href="#" className="flex items-center gap-4 text-moncash-text-secondary hover:text-moncash-lime hover:bg-moncash-card p-4 rounded-xl transition-all font-medium">
-            <PiggyBank size={22} /> Planejamento
-          </a>
-          <a href="#" className="flex items-center gap-4 text-moncash-text-secondary hover:text-moncash-lime hover:bg-moncash-card p-4 rounded-xl transition-all font-medium">
-            <Settings size={22} /> Configurações
-          </a>
+      {/* Sidebar Desktop */}
+      <aside className="hidden md:flex w-64 border-r border-moncash-border p-6 flex-col bg-moncash-dark">
+        <img src={logoUrl} alt="Logo" className="w-32 mb-10" />
+        <nav className="flex flex-col gap-2 flex-1">
+          <button className="flex items-center gap-4 bg-moncash-lime text-moncash-darker p-3 rounded-xl font-bold">🏠 Início</button>
+          <button className="flex items-center gap-4 text-moncash-text-muted p-3 rounded-xl">💸 Gastos</button>
+          <button className="flex items-center gap-4 text-moncash-text-muted p-3 rounded-xl">⚙️ Ajustes</button>
         </nav>
-
-        <button onClick={handleLogout} className="flex items-center gap-4 text-moncash-error hover:bg-moncash-error/10 p-4 rounded-xl transition-all font-medium mt-auto">
-          <LogOut size={22} /> Sair
-        </button>
       </aside>
 
-      {/* Conteúdo Principal */}
-      <main className="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full animate-slide-up">
+      <main className="flex-1 max-w-3xl mx-auto w-full p-4 md:p-8 space-y-6">
         
-        <div className="md:hidden flex justify-between items-center mb-8">
-           <img src={logoUrl} alt="Logo Moncash" className="w-28 h-auto object-contain" />
-           <button onClick={handleLogout} className="text-moncash-error p-2">
-             <LogOut size={24} />
-           </button>
-        </div>
-
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white">
-              Olá, <span className="text-moncash-lime">{nomeUtilizador.split(' ')[0]}</span>!
-            </h1>
-            <p className="text-moncash-text-muted mt-1">Aqui está o resumo de <span className="text-white font-medium">Maio / 2026</span></p>
-          </div>
-          {/* Botão de abrir modal (Desktop) */}
-          <button onClick={() => setModalAberto(true)} className="hidden md:flex bg-moncash-lime text-moncash-darker px-7 py-3.5 rounded-full font-bold items-center gap-2 hover:brightness-110 hover:scale-105 transition-all animate-glow">
-            <Plus size={20} strokeWidth={3} /> Nova Transação
-          </button>
-        </header>
-
-        {/* Cards de Resumo */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-10">
-          <div className="bg-gradient-to-br from-moncash-card to-moncash-dark p-6 md:p-8 rounded-3xl border border-moncash-lime/30 shadow-lg">
-            <p className="text-moncash-text-secondary mb-2 font-medium">Saldo Disponível</p>
-            <h2 className="text-4xl md:text-5xl font-extrabold text-moncash-lime drop-shadow-[0_0_10px_rgba(213,255,64,0.3)]">R$ 0,00</h2>
-          </div>
-          <div className="bg-moncash-card p-6 md:p-8 rounded-3xl border border-moncash-border shadow-md">
-            <div className="flex items-center gap-2 text-moncash-success mb-3 font-medium">
-              <ArrowUpCircle size={20} /> <span>Entradas do mês</span>
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white">R$ 0,00</h2>
-          </div>
-          <div className="bg-moncash-card p-6 md:p-8 rounded-3xl border border-moncash-border shadow-md">
-            <div className="flex items-center gap-2 text-moncash-error mb-3 font-medium">
-              <ArrowDownCircle size={20} /> <span>Saídas previstas</span>
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white">R$ 0,00</h2>
+        {/* Seletor de Mês */}
+        <div className="text-center py-4">
+          <div className="flex items-center justify-center gap-4">
+            <button className="p-2 bg-moncash-card rounded-lg text-moncash-text-muted"><ChevronLeft /></button>
+            <h2 className="text-2xl font-bold">Maio 2026</h2>
+            <button className="p-2 bg-moncash-card rounded-lg text-moncash-text-muted"><ChevronRight /></button>
           </div>
         </div>
 
-        <div className="bg-moncash-card rounded-3xl p-6 md:p-8 border border-moncash-border shadow-md">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-bold text-white">Últimas Atividades</h3>
+        {/* Resumo de Gastos Avulsos */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-moncash-card p-5 rounded-2xl border border-moncash-border">
+            <p className="text-[10px] uppercase tracking-wider text-moncash-text-muted mb-1">Gastos Avulsos</p>
+            <p className="text-2xl font-bold text-moncash-warning">
+              R$ {totalGastosAvulsos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </p>
           </div>
-          <div className="text-center py-16 text-moncash-text-muted bg-moncash-darker rounded-2xl border border-dashed border-moncash-border-light">
-            <p>Nenhuma transação cadastrada ainda.</p>
+          <div className="bg-moncash-card p-5 rounded-2xl border border-moncash-border">
+            <p className="text-[10px] uppercase tracking-wider text-moncash-text-muted mb-1">Saldo Atual</p>
+            <p className="text-2xl font-bold text-moncash-lime">R$ 5.500,00</p>
           </div>
+        </div>
+
+        {/* LISTAS DE CONTAS */}
+        <div className="space-y-8">
+          
+          {/* 1. CONTAS TEMPORÁRIAS (A nova categoria que você pediu) */}
+          <section>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-xs font-bold text-moncash-text-muted uppercase tracking-widest flex items-center gap-2">
+                <span className="text-orange-400">⚡</span> Contas Temporárias
+              </h3>
+              <span className="text-[10px] bg-moncash-card px-2 py-1 rounded text-moncash-text-muted">{contasTemporarias.length} itens</span>
+            </div>
+            <div className="space-y-2">
+              {contasTemporarias.length > 0 ? contasTemporarias.map((conta: any) => (
+                <div key={conta.id} className="bg-moncash-card p-4 rounded-2xl flex justify-between items-center border border-white/5">
+                  <div>
+                    <p className="font-semibold text-white">{conta.nome}</p>
+                    <p className="text-[10px] text-moncash-text-muted uppercase">Vencimento: {conta.vencimento}</p>
+                  </div>
+                  <p className="font-bold text-white">R$ {conta.valor.toFixed(2)}</p>
+                </div>
+              )) : (
+                <p className="text-center py-4 text-xs text-moncash-text-muted italic bg-moncash-card/30 rounded-2xl border border-dashed border-moncash-border">Nenhuma conta temporária este mês.</p>
+              )}
+            </div>
+          </section>
+
+          {/* 2. CONTAS FIXAS */}
+          <section>
+            <h3 className="text-xs font-bold text-moncash-text-muted uppercase tracking-widest flex items-center gap-2 mb-3">
+              <span className="text-blue-400">🔄</span> Contas Fixas
+            </h3>
+            <div className="space-y-2">
+              {contasFixas.map((conta: any) => (
+                <div key={conta.id} className="bg-moncash-card p-4 rounded-2xl flex justify-between items-center border border-white/5">
+                  <p className="font-semibold text-white">{conta.nome}</p>
+                  <button className="w-8 h-8 rounded-full bg-moncash-dark text-white">+</button>
+                </div>
+              ))}
+            </div>
+          </section>
+
         </div>
       </main>
 
-      {/* Menu Mobile */}
-      <nav className="md:hidden fixed bottom-0 w-full bg-moncash-darker/90 backdrop-blur-md border-t border-moncash-border flex justify-around p-4 z-40 pb-safe">
-        <a href="#" className="flex flex-col items-center gap-1 text-moncash-lime">
-          <LayoutDashboard size={24} />
-          <span className="text-[10px] font-medium">Início</span>
-        </a>
-        <a href="#" className="flex flex-col items-center gap-1 text-moncash-text-muted">
-          <Receipt size={24} />
-          <span className="text-[10px] font-medium">Transações</span>
-        </a>
-        {/* Botão de abrir modal (Mobile) */}
-        <button onClick={() => setModalAberto(true)} className="flex flex-col items-center gap-1 text-moncash-text-muted">
-          <Plus size={36} className="bg-moncash-lime text-moncash-darker rounded-full p-2 -mt-6 shadow-lime" />
-          <span className="text-[10px] font-medium text-moncash-lime">Nova</span>
-        </button>
-        <a href="#" className="flex flex-col items-center gap-1 text-moncash-text-muted">
-          <PiggyBank size={24} />
-          <span className="text-[10px] font-medium">Metas</span>
-        </a>
-        <a href="#" className="flex flex-col items-center gap-1 text-moncash-text-muted">
-          <Settings size={24} />
-          <span className="text-[10px] font-medium">Ajustes</span>
-        </a>
+      {/* Navegação Mobile */}
+      <nav className="md:hidden fixed bottom-0 w-full bg-moncash-darker/95 backdrop-blur-md border-t border-moncash-border flex justify-around p-4">
+        <button className="flex flex-col items-center gap-1 text-moncash-lime">🏠<span className="text-[10px]">Início</span></button>
+        <button className="flex flex-col items-center gap-1 text-moncash-text-muted">💸<span className="text-[10px]">Gastos</span></button>
+        <button className="flex flex-col items-center gap-1 text-moncash-text-muted">⚙️<span className="text-[10px]">Ajustes</span></button>
       </nav>
-
-      {/* JANELA MODAL DE NOVA TRANSAÇÃO */}
-      {modalAberto && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-moncash-card w-full max-w-md rounded-3xl border border-moncash-border shadow-2xl overflow-hidden animate-slide-up">
-            
-            <div className="flex justify-between items-center p-6 border-b border-white/5">
-              <h2 className="text-xl font-bold text-white">Nova Transação</h2>
-              <button onClick={() => setModalAberto(false)} className="text-moncash-text-muted hover:text-white transition-colors bg-moncash-darker rounded-full p-2">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="p-6">
-              {/* Botões de Escolha (Entrada / Saída) */}
-              <div className="flex bg-moncash-darker rounded-xl p-1 mb-6">
-                <button 
-                  onClick={() => setTipoTransacao('saida')} 
-                  className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${tipoTransacao === 'saida' ? 'bg-moncash-error text-moncash-darker shadow-md' : 'text-moncash-text-muted hover:text-white'}`}
-                >
-                  Saída
-                </button>
-                <button 
-                  onClick={() => setTipoTransacao('entrada')} 
-                  className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${tipoTransacao === 'entrada' ? 'bg-moncash-success text-moncash-darker shadow-md' : 'text-moncash-text-muted hover:text-white'}`}
-                >
-                  Entrada
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-moncash-text-secondary mb-1">Valor</label>
-                  <input type="number" placeholder="R$ 0,00" className="w-full bg-moncash-dark border border-moncash-border focus:border-moncash-lime text-white rounded-xl p-4 outline-none transition-colors text-2xl font-bold" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-moncash-text-secondary mb-1">Descrição</label>
-                  <input type="text" placeholder="Ex: Gasolina, Supermercado..." className="w-full bg-moncash-dark border border-moncash-border focus:border-moncash-lime text-white rounded-xl p-3 outline-none transition-colors" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-moncash-text-secondary mb-1">Categoria</label>
-                  <select className="w-full bg-moncash-dark border border-moncash-border focus:border-moncash-lime text-white rounded-xl p-3 outline-none transition-colors appearance-none">
-                    <option>Selecione uma categoria...</option>
-                    <option>Transporte</option>
-                    <option>Alimentação</option>
-                    <option>Moradia</option>
-                  </select>
-                </div>
-              </div>
-
-              <button className="w-full bg-moncash-lime text-moncash-darker font-bold py-4 rounded-xl mt-8 hover:brightness-110 transition-all shadow-[0_0_15px_rgba(213,255,64,0.2)]">
-                Salvar Transação
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
     </div>
   );
 }
