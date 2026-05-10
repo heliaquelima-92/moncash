@@ -6,8 +6,8 @@ import { supabase } from '@/lib/supabase';
 const DadosContext = createContext<any>({});
 
 export function DadosProvider({ children }: { children: React.ReactNode }) {
-  const [contasMes, setContasMes] = useState([]);
-  const [gastosAvulsos, setGastosAvulsos] = useState([]);
+  const [contasMes, setContasMes] = useState<any[]>([]);
+const [gastosAvulsos, setGastosAvulsos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filtros de data (Maio 2026 como exemplo conforme seu briefing)
