@@ -1,8 +1,63 @@
-import React from 'react';
-import { LayoutDashboard, Receipt, PiggyBank, Settings, Plus, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+"use client";
+
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { LayoutDashboard, Receipt, PiggyBank, Settings, Plus, ArrowUpCircle, ArrowDownCircle, LogOut } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export default function Home() {
+  const router = useRouter();
+  const [carregando, setCarregando] = useState(true);
+  const [usuario, setUsuario] = useState<any>(null);
+
   const logoUrl = "https://i.imgur.com/igiIEnb.png"; 
+
+  // Verificação de Segurança (O Cadeado)
+  useEffect(() => {
+    const verificarSessao = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        // Se não tiver sessão, manda para o login
+        router.push('/login');
+      } else {
+        // Se tiver, guarda os dados do utilizador e destranca a tela
+        setUsuario(session.user);
+        setCarregando(false);
+      }
+    };
+
+    verificarSessao();
+
+    // Fica a ouvir caso o utilizador faça logout
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        router.push('/login');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [router]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
+
+  // Ecrã de Carregamento enquanto verifica a chave
+  if (carregando) {
+    return (
+      <div className="min-h-screen bg-moncash-darker flex items-center justify-center">
+        <div className="text-center animate-fade-in">
+          <img src={logoUrl} alt="Moncash" className="h-16 mx-auto mb-6 animate-pulse-lime drop-shadow-[0_0_15px_rgba(213,255,64,0.2)]" />
+          <div className="w-10 h-10 border-4 border-moncash-lime/20 border-t-moncash-lime rounded-full animate-spin mx-auto" />
+        </div>
+      </div>
+    );
+  }
+
+  // Se passou no teste de segurança, mostra a Dashboard!
+  const nomeUtilizador = usuario?.user_metadata?.nome || 'Utilizador';
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-moncash-darker text-moncash-text font-sans pb-20 md:pb-0 selection:bg-moncash-lime selection:text-moncash-darker">
@@ -13,7 +68,7 @@ export default function Home() {
           <img src={logoUrl} alt="Logo Moncash" className="w-40 h-auto object-contain drop-shadow-[0_0_15px_rgba(213,255,64,0.2)]" />
         </div>
 
-        <nav className="flex flex-col gap-2 mt-2">
+        <nav className="flex flex-col gap-2 mt-2 flex-1">
           <a href="#" className="flex items-center gap-4 text-moncash-darker bg-moncash-lime p-4 rounded-xl font-bold transition-all animate-glow">
             <LayoutDashboard size={22} /> Dashboard
           </a>
@@ -27,6 +82,11 @@ export default function Home() {
             <Settings size={22} /> Configurações
           </a>
         </nav>
+
+        {/* Botão de Sair */}
+        <button onClick={handleLogout} className="flex items-center gap-4 text-moncash-error hover:bg-moncash-error/10 p-4 rounded-xl transition-all font-medium mt-auto">
+          <LogOut size={22} /> Sair
+        </button>
       </aside>
 
       {/* Main Content - Conteúdo Principal */}
@@ -35,16 +95,18 @@ export default function Home() {
         {/* Header Celular */}
         <div className="md:hidden flex justify-between items-center mb-8">
            <img src={logoUrl} alt="Logo Moncash" className="w-28 h-auto object-contain" />
-           <button className="bg-moncash-lime text-moncash-darker p-3 rounded-full animate-glow">
-             <Plus size={24} strokeWidth={3} />
+           <button onClick={handleLogout} className="text-moncash-error p-2">
+             <LogOut size={24} />
            </button>
         </div>
 
         {/* Header Principal */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white">Olá, Heliaque!</h1>
-            <p className="text-moncash-text-muted mt-1">Aqui está o resumo de <span className="text-moncash-lime font-medium">Maio / 2026</span></p>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white">
+              Olá, <span className="text-moncash-lime">{nomeUtilizador.split(' ')[0]}</span>!
+            </h1>
+            <p className="text-moncash-text-muted mt-1">Aqui está o resumo de <span className="text-white font-medium">Maio / 2026</span></p>
           </div>
           <button className="hidden md:flex bg-moncash-lime text-moncash-darker px-7 py-3.5 rounded-full font-bold items-center gap-2 hover:brightness-110 hover:scale-105 transition-all animate-glow">
             <Plus size={20} strokeWidth={3} /> Nova Transação
@@ -94,6 +156,10 @@ export default function Home() {
         <a href="#" className="flex flex-col items-center gap-1 text-moncash-text-muted hover:text-white transition-colors">
           <Receipt size={24} />
           <span className="text-[10px] font-medium">Transações</span>
+        </a>
+        <a href="#" className="flex flex-col items-center gap-1 text-moncash-text-muted hover:text-white transition-colors">
+          <Plus size={36} className="bg-moncash-lime text-moncash-darker rounded-full p-2 -mt-6 shadow-lime" />
+          <span className="text-[10px] font-medium text-moncash-lime">Nova</span>
         </a>
         <a href="#" className="flex flex-col items-center gap-1 text-moncash-text-muted hover:text-white transition-colors">
           <PiggyBank size={24} />
