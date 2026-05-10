@@ -1,125 +1,223 @@
 "use client";
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { supabase } from '../../lib/supabase';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { LayoutDashboard, Receipt, PiggyBank, Settings, Plus, ArrowUpCircle, ArrowDownCircle, LogOut, X } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
-export default function Login() {
-  const [modo, setModo] = useState<'login' | 'registro'>('login');
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
-  const [nome, setNome] = useState('');
-  const [erro, setErro] = useState('');
-  const [sucesso, setSucesso] = useState('');
-  const [carregando, setCarregando] = useState(false);
+export default function Home() {
+  const router = useRouter();
+  const [carregando, setCarregando] = useState(true);
+  const [usuario, setUsuario] = useState<any>(null);
+  
+  // Controle do Modal
+  const [modalAberto, setModalAberto] = useState(false);
+  const [tipoTransacao, setTipoTransacao] = useState<'saida' | 'entrada'>('saida');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErro('');
-    setSucesso('');
+  const logoUrl = "https://i.imgur.com/igiIEnb.png"; 
 
-    if (!email.includes('@')) {
-      setErro('Email inválido');
-      return;
-    }
-    if (senha.length < 6) {
-      setErro('A senha deve ter no mínimo 6 caracteres');
-      return;
-    }
-    if (modo === 'registro' && !nome.trim()) {
-      setErro('Digite seu nome');
-      return;
-    }
-
-    setCarregando(true);
-
-    try {
-      if (modo === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
-        if (error) throw error;
-        window.location.href = '/'; // Redireciona para a Dashboard
+  useEffect(() => {
+    const verificarSessao = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/login');
       } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password: senha,
-          options: { data: { nome } }
-        });
-        if (error) throw error;
-        setSucesso('Conta criada! Agora você já pode entrar.');
-        setModo('login');
+        setUsuario(session.user);
+        setCarregando(false);
       }
-    } catch (error: any) {
-      if (error.message.includes('Invalid login')) setErro('Email ou senha incorretos');
-      else if (error.message.includes('already registered')) setErro('Este email já está cadastrado');
-      else setErro('Erro ao processar. Tente novamente.');
-    } finally {
-      setCarregando(false);
-    }
+    };
+
+    verificarSessao();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) router.push('/login');
+    });
+
+    return () => subscription.unsubscribe();
+  }, [router]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
   };
 
-  return (
-    <div className="min-h-screen bg-moncash-darker flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* Background effects */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-moncash-lime/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-moncash-lime/5 rounded-full blur-[100px]" />
+  if (carregando) {
+    return (
+      <div className="min-h-screen bg-moncash-darker flex items-center justify-center">
+        <div className="text-center animate-fade-in">
+          <img src={logoUrl} alt="Moncash" className="h-16 mx-auto mb-6 animate-pulse-lime drop-shadow-[0_0_15px_rgba(213,255,64,0.2)]" />
+          <div className="w-10 h-10 border-4 border-moncash-lime/20 border-t-moncash-lime rounded-full animate-spin mx-auto" />
+        </div>
       </div>
+    );
+  }
+
+  const nomeUtilizador = usuario?.user_metadata?.nome || 'Utilizador';
+
+  return (
+    <div className="flex flex-col md:flex-row min-h-screen bg-moncash-darker text-moncash-text font-sans pb-20 md:pb-0 selection:bg-moncash-lime selection:text-moncash-darker relative">
       
-      {/* Logo */}
-      <motion.div initial={{ opacity: 0, y: -30 }} animate={{ opacity: 1, y: 0 }} className="relative z-10 mb-10 text-center">
-        <img src="https://i.imgur.com/igiIEnb.png" alt="Moncash" className="h-20 mx-auto drop-shadow-lg" />
-        <p className="text-moncash-text-muted text-sm mt-3">Seu controle financeiro inteligente</p>
-      </motion.div>
+      {/* Sidebar - Computador */}
+      <aside className="hidden md:flex w-64 border-r border-moncash-border p-6 flex-col gap-8 bg-moncash-dark z-10 relative">
+        <div className="flex justify-center items-center py-4 animate-fade-in">
+          <img src={logoUrl} alt="Logo Moncash" className="w-40 h-auto object-contain drop-shadow-[0_0_15px_rgba(213,255,64,0.2)]" />
+        </div>
 
-      {/* Card de Login */}
-      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="relative z-10 w-full max-w-sm">
-        <div className="bg-moncash-card border border-moncash-border p-8 rounded-3xl shadow-2xl">
-          <h2 className="text-2xl font-bold text-white mb-6 text-center">
-            {modo === 'login' ? 'Entrar' : 'Criar conta'}
-          </h2>
+        <nav className="flex flex-col gap-2 mt-2 flex-1">
+          <a href="#" className="flex items-center gap-4 text-moncash-darker bg-moncash-lime p-4 rounded-xl font-bold transition-all animate-glow">
+            <LayoutDashboard size={22} /> Dashboard
+          </a>
+          <a href="#" className="flex items-center gap-4 text-moncash-text-secondary hover:text-moncash-lime hover:bg-moncash-card p-4 rounded-xl transition-all font-medium">
+            <Receipt size={22} /> Transações
+          </a>
+          <a href="#" className="flex items-center gap-4 text-moncash-text-secondary hover:text-moncash-lime hover:bg-moncash-card p-4 rounded-xl transition-all font-medium">
+            <PiggyBank size={22} /> Planejamento
+          </a>
+          <a href="#" className="flex items-center gap-4 text-moncash-text-secondary hover:text-moncash-lime hover:bg-moncash-card p-4 rounded-xl transition-all font-medium">
+            <Settings size={22} /> Configurações
+          </a>
+        </nav>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {modo === 'registro' && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
-                <label className="block text-sm font-medium text-moncash-text-secondary mb-1">Nome</label>
-                <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Seu nome" className="w-full bg-moncash-dark border border-moncash-border focus:border-moncash-lime text-white rounded-xl p-3 outline-none transition-colors" disabled={carregando} />
-              </motion.div>
-            )}
+        <button onClick={handleLogout} className="flex items-center gap-4 text-moncash-error hover:bg-moncash-error/10 p-4 rounded-xl transition-all font-medium mt-auto">
+          <LogOut size={22} /> Sair
+        </button>
+      </aside>
 
-            <div>
-              <label className="block text-sm font-medium text-moncash-text-secondary mb-1">Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" className="w-full bg-moncash-dark border border-moncash-border focus:border-moncash-lime text-white rounded-xl p-3 outline-none transition-colors" disabled={carregando} />
+      {/* Conteúdo Principal */}
+      <main className="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full animate-slide-up">
+        
+        <div className="md:hidden flex justify-between items-center mb-8">
+           <img src={logoUrl} alt="Logo Moncash" className="w-28 h-auto object-contain" />
+           <button onClick={handleLogout} className="text-moncash-error p-2">
+             <LogOut size={24} />
+           </button>
+        </div>
+
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white">
+              Olá, <span className="text-moncash-lime">{nomeUtilizador.split(' ')[0]}</span>!
+            </h1>
+            <p className="text-moncash-text-muted mt-1">Aqui está o resumo de <span className="text-white font-medium">Maio / 2026</span></p>
+          </div>
+          {/* Botão de abrir modal (Desktop) */}
+          <button onClick={() => setModalAberto(true)} className="hidden md:flex bg-moncash-lime text-moncash-darker px-7 py-3.5 rounded-full font-bold items-center gap-2 hover:brightness-110 hover:scale-105 transition-all animate-glow">
+            <Plus size={20} strokeWidth={3} /> Nova Transação
+          </button>
+        </header>
+
+        {/* Cards de Resumo */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-10">
+          <div className="bg-gradient-to-br from-moncash-card to-moncash-dark p-6 md:p-8 rounded-3xl border border-moncash-lime/30 shadow-lg">
+            <p className="text-moncash-text-secondary mb-2 font-medium">Saldo Disponível</p>
+            <h2 className="text-4xl md:text-5xl font-extrabold text-moncash-lime drop-shadow-[0_0_10px_rgba(213,255,64,0.3)]">R$ 0,00</h2>
+          </div>
+          <div className="bg-moncash-card p-6 md:p-8 rounded-3xl border border-moncash-border shadow-md">
+            <div className="flex items-center gap-2 text-moncash-success mb-3 font-medium">
+              <ArrowUpCircle size={20} /> <span>Entradas do mês</span>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-moncash-text-secondary mb-1">Senha</label>
-              <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="••••••••" className="w-full bg-moncash-dark border border-moncash-border focus:border-moncash-lime text-white rounded-xl p-3 outline-none transition-colors" disabled={carregando} />
+            <h2 className="text-3xl md:text-4xl font-bold text-white">R$ 0,00</h2>
+          </div>
+          <div className="bg-moncash-card p-6 md:p-8 rounded-3xl border border-moncash-border shadow-md">
+            <div className="flex items-center gap-2 text-moncash-error mb-3 font-medium">
+              <ArrowDownCircle size={20} /> <span>Saídas previstas</span>
             </div>
-
-            {erro && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-moncash-error/10 border border-moncash-error/30 rounded-xl p-3">
-                <p className="text-moncash-error text-sm text-center font-medium">{erro}</p>
-              </motion.div>
-            )}
-
-            {sucesso && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-moncash-success/10 border border-moncash-success/30 rounded-xl p-3">
-                <p className="text-moncash-success text-sm text-center font-medium">{sucesso}</p>
-              </motion.div>
-            )}
-
-            <button type="submit" disabled={carregando} className="w-full bg-moncash-lime hover:bg-moncash-lime-dark text-moncash-darker font-bold py-3.5 rounded-xl transition-all shadow-[0_0_15px_rgba(213,255,64,0.2)] hover:shadow-[0_0_25px_rgba(213,255,64,0.4)] flex justify-center items-center h-12 mt-2">
-              {carregando ? <div className="w-5 h-5 border-2 border-moncash-darker/30 border-t-moncash-darker rounded-full animate-spin" /> : (modo === 'login' ? 'Entrar' : 'Criar conta')}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <button onClick={() => { setModo(modo === 'login' ? 'registro' : 'login'); setErro(''); setSucesso(''); }} className="text-moncash-text-muted hover:text-moncash-lime transition-colors text-sm font-medium">
-              {modo === 'login' ? 'Não tem conta? Criar agora' : 'Já tem conta? Entrar'}
-            </button>
+            <h2 className="text-3xl md:text-4xl font-bold text-white">R$ 0,00</h2>
           </div>
         </div>
-      </motion.div>
+
+        <div className="bg-moncash-card rounded-3xl p-6 md:p-8 border border-moncash-border shadow-md">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-white">Últimas Atividades</h3>
+          </div>
+          <div className="text-center py-16 text-moncash-text-muted bg-moncash-darker rounded-2xl border border-dashed border-moncash-border-light">
+            <p>Nenhuma transação cadastrada ainda.</p>
+          </div>
+        </div>
+      </main>
+
+      {/* Menu Mobile */}
+      <nav className="md:hidden fixed bottom-0 w-full bg-moncash-darker/90 backdrop-blur-md border-t border-moncash-border flex justify-around p-4 z-40 pb-safe">
+        <a href="#" className="flex flex-col items-center gap-1 text-moncash-lime">
+          <LayoutDashboard size={24} />
+          <span className="text-[10px] font-medium">Início</span>
+        </a>
+        <a href="#" className="flex flex-col items-center gap-1 text-moncash-text-muted">
+          <Receipt size={24} />
+          <span className="text-[10px] font-medium">Transações</span>
+        </a>
+        {/* Botão de abrir modal (Mobile) */}
+        <button onClick={() => setModalAberto(true)} className="flex flex-col items-center gap-1 text-moncash-text-muted">
+          <Plus size={36} className="bg-moncash-lime text-moncash-darker rounded-full p-2 -mt-6 shadow-lime" />
+          <span className="text-[10px] font-medium text-moncash-lime">Nova</span>
+        </button>
+        <a href="#" className="flex flex-col items-center gap-1 text-moncash-text-muted">
+          <PiggyBank size={24} />
+          <span className="text-[10px] font-medium">Metas</span>
+        </a>
+        <a href="#" className="flex flex-col items-center gap-1 text-moncash-text-muted">
+          <Settings size={24} />
+          <span className="text-[10px] font-medium">Ajustes</span>
+        </a>
+      </nav>
+
+      {/* JANELA MODAL DE NOVA TRANSAÇÃO */}
+      {modalAberto && (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-moncash-card w-full max-w-md rounded-3xl border border-moncash-border shadow-2xl overflow-hidden animate-slide-up">
+            
+            <div className="flex justify-between items-center p-6 border-b border-white/5">
+              <h2 className="text-xl font-bold text-white">Nova Transação</h2>
+              <button onClick={() => setModalAberto(false)} className="text-moncash-text-muted hover:text-white transition-colors bg-moncash-darker rounded-full p-2">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {/* Botões de Escolha (Entrada / Saída) */}
+              <div className="flex bg-moncash-darker rounded-xl p-1 mb-6">
+                <button 
+                  onClick={() => setTipoTransacao('saida')} 
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${tipoTransacao === 'saida' ? 'bg-moncash-error text-moncash-darker shadow-md' : 'text-moncash-text-muted hover:text-white'}`}
+                >
+                  Saída
+                </button>
+                <button 
+                  onClick={() => setTipoTransacao('entrada')} 
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${tipoTransacao === 'entrada' ? 'bg-moncash-success text-moncash-darker shadow-md' : 'text-moncash-text-muted hover:text-white'}`}
+                >
+                  Entrada
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-moncash-text-secondary mb-1">Valor</label>
+                  <input type="number" placeholder="R$ 0,00" className="w-full bg-moncash-dark border border-moncash-border focus:border-moncash-lime text-white rounded-xl p-4 outline-none transition-colors text-2xl font-bold" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-moncash-text-secondary mb-1">Descrição</label>
+                  <input type="text" placeholder="Ex: Gasolina, Supermercado..." className="w-full bg-moncash-dark border border-moncash-border focus:border-moncash-lime text-white rounded-xl p-3 outline-none transition-colors" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-moncash-text-secondary mb-1">Categoria</label>
+                  <select className="w-full bg-moncash-dark border border-moncash-border focus:border-moncash-lime text-white rounded-xl p-3 outline-none transition-colors appearance-none">
+                    <option>Selecione uma categoria...</option>
+                    <option>Transporte</option>
+                    <option>Alimentação</option>
+                    <option>Moradia</option>
+                  </select>
+                </div>
+              </div>
+
+              <button className="w-full bg-moncash-lime text-moncash-darker font-bold py-4 rounded-xl mt-8 hover:brightness-110 transition-all shadow-[0_0_15px_rgba(213,255,64,0.2)]">
+                Salvar Transação
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
     </div>
   );
 }
