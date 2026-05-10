@@ -1,35 +1,25 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { DadosProvider } from "@/hooks/useDados";
 
 export const metadata: Metadata = {
-  title: "Moncash | Controle Financeiro",
-  description: "Seu controle financeiro inteligente.",
-  icons: {
-    icon: "https://i.imgur.com/DrNcyU0.png",
-  },
+  title: "Moncash",
+  description: "Seu controle financeiro inteligente",
 };
+
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="pt-BR">
+      <body>
+        {/* Aqui nós "abraçamos" o app inteiro com o nosso Cérebro de Dados! */}
+        <DadosProvider>
+          {children}
+        </DadosProvider>
+      </body>
     </html>
   );
 }
