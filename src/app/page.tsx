@@ -2,26 +2,26 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LayoutDashboard, Receipt, PiggyBank, Settings, Plus, ArrowUpCircle, ArrowDownCircle, LogOut } from 'lucide-react';
+import { LayoutDashboard, Receipt, PiggyBank, Settings, Plus, ArrowUpCircle, ArrowDownCircle, LogOut, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export default function Home() {
   const router = useRouter();
   const [carregando, setCarregando] = useState(true);
   const [usuario, setUsuario] = useState<any>(null);
+  
+  // Controle do Modal
+  const [modalAberto, setModalAberto] = useState(false);
+  const [tipoTransacao, setTipoTransacao] = useState<'saida' | 'entrada'>('saida');
 
   const logoUrl = "https://i.imgur.com/igiIEnb.png"; 
 
-  // Verificação de Segurança (O Cadeado)
   useEffect(() => {
     const verificarSessao = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      
       if (!session) {
-        // Se não tiver sessão, manda para o login
         router.push('/login');
       } else {
-        // Se tiver, guarda os dados do utilizador e destranca a tela
         setUsuario(session.user);
         setCarregando(false);
       }
@@ -29,11 +29,8 @@ export default function Home() {
 
     verificarSessao();
 
-    // Fica a ouvir caso o utilizador faça logout
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        router.push('/login');
-      }
+      if (!session) router.push('/login');
     });
 
     return () => subscription.unsubscribe();
@@ -44,7 +41,6 @@ export default function Home() {
     router.push('/login');
   };
 
-  // Ecrã de Carregamento enquanto verifica a chave
   if (carregando) {
     return (
       <div className="min-h-screen bg-moncash-darker flex items-center justify-center">
@@ -56,11 +52,10 @@ export default function Home() {
     );
   }
 
-  // Se passou no teste de segurança, mostra a Dashboard!
   const nomeUtilizador = usuario?.user_metadata?.nome || 'Utilizador';
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-moncash-darker text-moncash-text font-sans pb-20 md:pb-0 selection:bg-moncash-lime selection:text-moncash-darker">
+    <div className="flex flex-col md:flex-row min-h-screen bg-moncash-darker text-moncash-text font-sans pb-20 md:pb-0 selection:bg-moncash-lime selection:text-moncash-darker relative">
       
       {/* Sidebar - Computador */}
       <aside className="hidden md:flex w-64 border-r border-moncash-border p-6 flex-col gap-8 bg-moncash-dark z-10 relative">
@@ -83,16 +78,14 @@ export default function Home() {
           </a>
         </nav>
 
-        {/* Botão de Sair */}
         <button onClick={handleLogout} className="flex items-center gap-4 text-moncash-error hover:bg-moncash-error/10 p-4 rounded-xl transition-all font-medium mt-auto">
           <LogOut size={22} /> Sair
         </button>
       </aside>
 
-      {/* Main Content - Conteúdo Principal */}
+      {/* Conteúdo Principal */}
       <main className="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full animate-slide-up">
         
-        {/* Header Celular */}
         <div className="md:hidden flex justify-between items-center mb-8">
            <img src={logoUrl} alt="Logo Moncash" className="w-28 h-auto object-contain" />
            <button onClick={handleLogout} className="text-moncash-error p-2">
@@ -100,7 +93,6 @@ export default function Home() {
            </button>
         </div>
 
-        {/* Header Principal */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white">
@@ -108,26 +100,25 @@ export default function Home() {
             </h1>
             <p className="text-moncash-text-muted mt-1">Aqui está o resumo de <span className="text-white font-medium">Maio / 2026</span></p>
           </div>
-          <button className="hidden md:flex bg-moncash-lime text-moncash-darker px-7 py-3.5 rounded-full font-bold items-center gap-2 hover:brightness-110 hover:scale-105 transition-all animate-glow">
+          {/* Botão de abrir modal (Desktop) */}
+          <button onClick={() => setModalAberto(true)} className="hidden md:flex bg-moncash-lime text-moncash-darker px-7 py-3.5 rounded-full font-bold items-center gap-2 hover:brightness-110 hover:scale-105 transition-all animate-glow">
             <Plus size={20} strokeWidth={3} /> Nova Transação
           </button>
         </header>
 
         {/* Cards de Resumo */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-10">
-          <div className="bg-gradient-to-br from-moncash-card to-moncash-dark p-6 md:p-8 rounded-3xl border border-moncash-lime/30 shadow-lg group hover:border-moncash-lime/50 transition-colors">
+          <div className="bg-gradient-to-br from-moncash-card to-moncash-dark p-6 md:p-8 rounded-3xl border border-moncash-lime/30 shadow-lg">
             <p className="text-moncash-text-secondary mb-2 font-medium">Saldo Disponível</p>
             <h2 className="text-4xl md:text-5xl font-extrabold text-moncash-lime drop-shadow-[0_0_10px_rgba(213,255,64,0.3)]">R$ 0,00</h2>
           </div>
-          
-          <div className="bg-moncash-card hover:bg-moncash-card-hover p-6 md:p-8 rounded-3xl border border-moncash-border shadow-md transition-colors">
+          <div className="bg-moncash-card p-6 md:p-8 rounded-3xl border border-moncash-border shadow-md">
             <div className="flex items-center gap-2 text-moncash-success mb-3 font-medium">
               <ArrowUpCircle size={20} /> <span>Entradas do mês</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-white">R$ 0,00</h2>
           </div>
-          
-          <div className="bg-moncash-card hover:bg-moncash-card-hover p-6 md:p-8 rounded-3xl border border-moncash-border shadow-md transition-colors">
+          <div className="bg-moncash-card p-6 md:p-8 rounded-3xl border border-moncash-border shadow-md">
             <div className="flex items-center gap-2 text-moncash-error mb-3 font-medium">
               <ArrowDownCircle size={20} /> <span>Saídas previstas</span>
             </div>
@@ -135,11 +126,9 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Lista de Transações Recentes */}
         <div className="bg-moncash-card rounded-3xl p-6 md:p-8 border border-moncash-border shadow-md">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-bold text-white">Últimas Atividades</h3>
-            <a href="#" className="text-moncash-lime text-sm font-semibold hover:underline">Ver todas</a>
           </div>
           <div className="text-center py-16 text-moncash-text-muted bg-moncash-darker rounded-2xl border border-dashed border-moncash-border-light">
             <p>Nenhuma transação cadastrada ainda.</p>
@@ -147,29 +136,87 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Menu Mobile - Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 w-full bg-moncash-darker/90 backdrop-blur-md border-t border-moncash-border flex justify-around p-4 z-50 pb-safe">
+      {/* Menu Mobile */}
+      <nav className="md:hidden fixed bottom-0 w-full bg-moncash-darker/90 backdrop-blur-md border-t border-moncash-border flex justify-around p-4 z-40 pb-safe">
         <a href="#" className="flex flex-col items-center gap-1 text-moncash-lime">
           <LayoutDashboard size={24} />
           <span className="text-[10px] font-medium">Início</span>
         </a>
-        <a href="#" className="flex flex-col items-center gap-1 text-moncash-text-muted hover:text-white transition-colors">
+        <a href="#" className="flex flex-col items-center gap-1 text-moncash-text-muted">
           <Receipt size={24} />
           <span className="text-[10px] font-medium">Transações</span>
         </a>
-        <a href="#" className="flex flex-col items-center gap-1 text-moncash-text-muted hover:text-white transition-colors">
+        {/* Botão de abrir modal (Mobile) */}
+        <button onClick={() => setModalAberto(true)} className="flex flex-col items-center gap-1 text-moncash-text-muted">
           <Plus size={36} className="bg-moncash-lime text-moncash-darker rounded-full p-2 -mt-6 shadow-lime" />
           <span className="text-[10px] font-medium text-moncash-lime">Nova</span>
-        </a>
-        <a href="#" className="flex flex-col items-center gap-1 text-moncash-text-muted hover:text-white transition-colors">
+        </button>
+        <a href="#" className="flex flex-col items-center gap-1 text-moncash-text-muted">
           <PiggyBank size={24} />
           <span className="text-[10px] font-medium">Metas</span>
         </a>
-        <a href="#" className="flex flex-col items-center gap-1 text-moncash-text-muted hover:text-white transition-colors">
+        <a href="#" className="flex flex-col items-center gap-1 text-moncash-text-muted">
           <Settings size={24} />
           <span className="text-[10px] font-medium">Ajustes</span>
         </a>
       </nav>
+
+      {/* JANELA MODAL DE NOVA TRANSAÇÃO */}
+      {modalAberto && (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-moncash-card w-full max-w-md rounded-3xl border border-moncash-border shadow-2xl overflow-hidden animate-slide-up">
+            
+            <div className="flex justify-between items-center p-6 border-b border-white/5">
+              <h2 className="text-xl font-bold text-white">Nova Transação</h2>
+              <button onClick={() => setModalAberto(false)} className="text-moncash-text-muted hover:text-white transition-colors bg-moncash-darker rounded-full p-2">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {/* Botões de Escolha (Entrada / Saída) */}
+              <div className="flex bg-moncash-darker rounded-xl p-1 mb-6">
+                <button 
+                  onClick={() => setTipoTransacao('saida')} 
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${tipoTransacao === 'saida' ? 'bg-moncash-error text-moncash-darker shadow-md' : 'text-moncash-text-muted hover:text-white'}`}
+                >
+                  Saída
+                </button>
+                <button 
+                  onClick={() => setTipoTransacao('entrada')} 
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${tipoTransacao === 'entrada' ? 'bg-moncash-success text-moncash-darker shadow-md' : 'text-moncash-text-muted hover:text-white'}`}
+                >
+                  Entrada
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-moncash-text-secondary mb-1">Valor</label>
+                  <input type="number" placeholder="R$ 0,00" className="w-full bg-moncash-dark border border-moncash-border focus:border-moncash-lime text-white rounded-xl p-4 outline-none transition-colors text-2xl font-bold" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-moncash-text-secondary mb-1">Descrição</label>
+                  <input type="text" placeholder="Ex: Gasolina, Supermercado..." className="w-full bg-moncash-dark border border-moncash-border focus:border-moncash-lime text-white rounded-xl p-3 outline-none transition-colors" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-moncash-text-secondary mb-1">Categoria</label>
+                  <select className="w-full bg-moncash-dark border border-moncash-border focus:border-moncash-lime text-white rounded-xl p-3 outline-none transition-colors appearance-none">
+                    <option>Selecione uma categoria...</option>
+                    <option>Transporte</option>
+                    <option>Alimentação</option>
+                    <option>Moradia</option>
+                  </select>
+                </div>
+              </div>
+
+              <button className="w-full bg-moncash-lime text-moncash-darker font-bold py-4 rounded-xl mt-8 hover:brightness-110 transition-all shadow-[0_0_15px_rgba(213,255,64,0.2)]">
+                Salvar Transação
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
     </div>
   );
